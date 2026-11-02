@@ -1,0 +1,17 @@
+# Local undo snapshots and Studio sync state (duplicates of src)
+backups/
+tools/dev/base/
+tools/dev/pulled/
+
+# Generated output
+tools/blender/out_*/
+__pycache__/
+*.pyc
+*.blend1
+
+# Secrets, in case one is ever copied here
+*.key
+.env*
+roblox_key*
+
+.DS_Store

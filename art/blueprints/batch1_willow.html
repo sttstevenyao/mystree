@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Willow Fields Blueprints</title>
+<link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f3eee2; --ink: #3d3a34; --soft: #7a7365; --line: #cbb98c; --card: #fbf8f1; --grid: #e4dccb; --jade: #3a7a74;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #161d1e; --ink: #e6ece9; --soft: #9fb0ab; --line: #8a7a52; --card: #1f2829; --grid: #2a3536; --jade: #6cc2b8; }
+  }
+  :root[data-theme="dark"] { --bg: #161d1e; --ink: #e6ece9; --soft: #9fb0ab; --line: #8a7a52; --card: #1f2829; --grid: #2a3536; --jade: #6cc2b8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Montserrat, system-ui, sans-serif; }
+  header { padding: 28px 16px 8px; max-width: 1180px; margin: 0 auto; }
+  h1 { font-family: Merriweather, Georgia, serif; font-size: 28px; margin: 0 0 6px; }
+  header p { margin: 0; color: var(--soft); font-size: 14px; line-height: 1.5; max-width: 820px; }
+  main { max-width: 1180px; margin: 0 auto; padding: 8px 16px 40px; display: grid; gap: 18px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px 16px; }
+  .head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .head h2 { font-family: Merriweather, Georgia, serif; font-size: 20px; margin: 0; }
+  .tag { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; color: #fff; }
+  .normal { background: #6f7f78; } .elite { background: #b0662a; } .rare { background: #3d78c4; } .boss { background: #a8322a; }
+  .meta { color: var(--soft); font-size: 13px; }
+  .views { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-top: 10px; }
+  .view { border: 1px solid var(--grid); border-radius: 4px; overflow: hidden; }
+  .view svg { width: 100%; height: auto; display: block; }
+  .label { font-size: 11px; font-weight: 600; color: var(--soft); padding: 4px 8px; border-bottom: 1px solid var(--grid); }
+  ul { margin: 10px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.55; }
+  .swatches { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .sw { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--soft); }
+  .sw i { width: 14px; height: 14px; border-radius: 2px; display: inline-block; border: 1px solid rgba(0,0,0,.25); }
+  @media (max-width: 720px) { .views { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Batch 1 · Willow Fields creatures</h1>
+  <p>Side and front blueprints for the six Willow Fields creatures, drawn to their in-game size (grid = 1 stud). Semi-realistic, smooth and high-poly (no studs, no low-poly facets). Each model is split into rig pieces (Body, Head, Leg ×4, Tail, glow parts) so it can be animated. Glowing parts are separate so they can pulse. Approve or mark changes, then I model the batch in Blender.</p>
+</header>
+<main id="cards"></main>
+
+<script>
+// Each blueprint: side view (length along x) and front view. Coordinates in studs, drawn at `s` px per stud.
+const GRID = (w, h, s) => {
+  let g = '';
+  for (let x = 0; x <= w; x += s) g += `<line x1="${x}" y1="0" x2="${x}" y2="${h}" stroke="var(--grid)" stroke-width="1"/>`;
+  for (let y = 0; y <= h; y += s) g += `<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="var(--grid)" stroke-width="1"/>`;
+  return g;
+};
+const ground = (w, y) => `<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="var(--soft)" stroke-width="2"/>`;
+const dim = (x1, y1, x2, y2, txt, vertical) => {
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--jade)" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <text x="${vertical ? mx + 6 : mx}" y="${vertical ? my : my - 5}" fill="var(--jade)" font-size="12" font-weight="700" text-anchor="${vertical ? 'start' : 'middle'}">${txt}</text>`;
+};
+// a label on a leader line; it reads away from the point, but flips inward if it would run off the left edge
+const callout = (x, y, tx, ty, txt) => {
+  const right = tx > x || tx - txt.length * 6.3 < 4;
+  return `<line x1="${x}" y1="${y}" x2="${tx}" y2="${ty}" stroke="var(--soft)" stroke-width="1"/><circle cx="${x}" cy="${y}" r="2.5" fill="var(--soft)"/>
+   <text x="${tx + (right ? 4 : -4)}" y="${ty + 4}" fill="var(--ink)" font-size="11.5" text-anchor="${right ? 'start' : 'end'}" stroke="var(--card)" stroke-width="3.5" paint-order="stroke" stroke-linejoin="round">${txt}</text>`;
+};
+
+// ---------- creature drawings (paths are in px, already scaled) ----------
+const C = {};
+
+// Boar: 6 long, 3.2 tall at the shoulder hump, 4 wide (with bristles)
+C.Boar = {
+  title: 'Boar', kind: 'normal', meta: 'Lv 2 · 4 × 3.2 × 6 studs · normal',
+  sideW: 420, sideH: 230, frontW: 230, frontH: 230, s: 50,
+  side: (s) => {
+    const g = 200;
+    return `
+    <path d="M98 128 C 110 92, 160 74, 205 76 C 250 72, 300 84, 330 104 C 352 120, 356 150, 340 168 C 320 184, 280 188, 240 186 L 160 186 C 128 186, 104 172, 96 152 Z" fill="#6e503c"/>
+    <path d="M118 96 C 150 64, 210 60, 260 70 C 290 74, 316 86, 330 104 C 300 92, 250 84, 205 88 C 165 90, 135 100, 118 112 Z" fill="#4a3528"/>
+    ${[120,138,156,174,192,210,228,246,264,282,300].map((x,i)=>`<path d="M${x} ${100-(i<6?i*2:12-(i-6)*2)} l 6 -${10+(i%3)*4} l 6 ${10+(i%3)*4} Z" fill="#3a2a20"/>`).join('')}
+    <path d="M100 118 C 80 112, 56 122, 42 140 C 34 150, 34 162, 44 166 C 60 172, 84 166, 104 156 Z" fill="#7a5a44"/>
+    <ellipse cx="38" cy="156" rx="7" ry="11" fill="#5c3e30"/><ellipse cx="36" cy="156" rx="3" ry="5" fill="#2a1c16"/>
+    <path d="M58 158 C 52 150, 50 140, 56 132" stroke="#efe6d2" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <circle cx="80" cy="132" r="4" fill="#1c120e"/><circle cx="81" cy="131" r="1.4" fill="#d9c7a0"/>
+    <path d="M92 118 l 6 -22 l 10 18 Z" fill="#4a3528"/>
+    <path d="M128 182 L 124 ${g-4} L 138 ${g-4} L 140 182 Z" fill="#5a4030"/><path d="M150 184 L 146 ${g-4} L 160 ${g-4} L 162 184 Z" fill="#5a4030"/>
+    <path d="M270 182 C 266 196, 262 205, 262 ${g-4} L 276 ${g-4} L 284 182 Z" fill="#5a4030"/><path d="M296 178 C 292 194, 290 205, 290 ${g-4} L 304 ${g-4} L 310 178 Z" fill="#5a4030"/>
+    ${[124,146,262,290].map(x=>`<rect x="${x}" y="${g-6}" width="14" height="6" rx="1" fill="#241812"/>`).join('')}
+    <path d="M338 120 C 352 126, 356 138, 350 150" stroke="#4a3528" stroke-width="4" fill="none"/><path d="M348 146 l 8 10 l -12 -2 Z" fill="#3a2a20"/>
+    ${ground(420, g)}
+    ${dim(36, 214, 356, 214, '6 studs')}
+    ${dim(392, g, 392, 74, '3.2', true)}
+    ${callout(130, 90, 150, 30, 'Bristle crest: darker, irregular spikes')}
+    ${callout(56, 140, 20, 40, 'Short upturned tusks')}
+    ${callout(38, 156, 10, 66, 'Wet disc snout, recessed nostrils')}`;
+  },
+  front: (s) => {
+    const g = 200;
+    return `
+    <ellipse cx="115" cy="140" rx="70" ry="52" fill="#6e503c"/>
+    <path d="M60 104 C 80 80, 150 80, 170 104 C 150 94, 80 94, 60 104 Z" fill="#4a3528"/>
+    <path d="M78 118 C 78 98, 152 98, 152 118 L 146 168 C 140 182, 90 182, 84 168 Z" fill="#7a5a44"/>
+    <ellipse cx="115" cy="166" rx="20" ry="14" fill="#5c3e30"/><ellipse cx="108" cy="166" rx="4" ry="6" fill="#2a1c16"/><ellipse cx="122" cy="166" rx="4" ry="6" fill="#2a1c16"/>
+    <path d="M94 170 C 86 160, 86 150, 92 142" stroke="#efe6d2" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M136 170 C 144 160, 144 150, 138 142" stroke="#efe6d2" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <circle cx="96" cy="128" r="4" fill="#1c120e"/><circle cx="134" cy="128" r="4" fill="#1c120e"/>
+    <path d="M76 110 l -12 -22 l 22 10 Z" fill="#4a3528"/><path d="M154 110 l 12 -22 l -22 10 Z" fill="#4a3528"/>
+    <rect x="72" y="182" width="14" height="${g-182}" fill="#5a4030"/><rect x="144" y="182" width="14" height="${g-182}" fill="#5a4030"/>
+    ${ground(230, g)}
+    ${dim(45, 214, 185, 214, '4 studs')}`;
+  },
+  notes: ['Heavy shoulder hump, deep chest, back slopes down to thin haunches (hip ≈ 0.85 of shoulder height).',
+          'Head ≈ 0.35 of body length, wedge-shaped, eyes small and high on the skull.',
+          'Legs short and thin for the body, cloven hooves as their own darker pieces.',
+          'Coat: mottled brown, darker bristle crest along the spine, lighter snout and cheeks.'],
+  colors: [['#6e503c','Coat'],['#4a3528','Crest'],['#7a5a44','Snout'],['#efe6d2','Tusks'],['#241812','Hooves']],
+};
+
+// Grey Wolf: 6.5 long, 3.4 tall at the head, 3 wide
+C.Wolf = {
+  title: 'Grey Wolf', kind: 'normal', meta: 'Lv 4 · 3 × 3.4 × 6.5 studs · normal',
+  sideW: 420, sideH: 230, frontW: 230, frontH: 230, s: 50,
+  side: () => {
+    const g = 200;
+    return `
+    <path d="M110 110 C 130 96, 170 94, 210 100 C 250 104, 280 104, 300 112 C 318 120, 322 140, 312 150 C 290 158, 260 148, 240 146 L 180 148 C 150 152, 120 152, 104 138 Z" fill="#7d7d84"/>
+    <path d="M130 104 C 170 94, 250 100, 300 112 C 270 108, 220 106, 180 110 C 160 112, 140 112, 130 112 Z" fill="#55565e"/>
+    <path d="M120 130 C 116 150, 130 160, 150 158 L 168 150 C 150 150, 132 144, 126 128 Z" fill="#c9c6bf"/>
+    <path d="M112 112 C 98 96, 92 80, 96 66 C 100 56, 110 52, 120 56 L 128 80 C 132 92, 128 104, 120 112 Z" fill="#7d7d84"/>
+    <path d="M100 66 C 84 66, 64 72, 46 80 C 40 84, 42 90, 50 92 C 66 96, 86 92, 104 86 Z" fill="#8c8b90"/>
+    <path d="M50 84 C 60 90, 74 92, 90 90" stroke="#c9c6bf" stroke-width="5" fill="none"/>
+    <ellipse cx="44" cy="84" rx="5" ry="4" fill="#1b1b1e"/>
+    <path d="M92 70 l 10 -2" stroke="#1a1a1c" stroke-width="3"/><circle cx="96" cy="70" r="2.2" fill="#e8c46a"/>
+    <path d="M108 60 l 4 -24 l 12 22 Z" fill="#55565e"/><path d="M114 58 l 2 -14 l 6 12 Z" fill="#c9c6bf"/>
+    <path d="M146 150 L 140 ${g-6} L 152 ${g-6} L 160 150 Z" fill="#6d6d74"/><path d="M166 150 L 162 ${g-6} L 174 ${g-6} L 180 150 Z" fill="#6d6d74"/>
+    <path d="M262 146 C 256 166, 270 176, 266 ${g-6} L 278 ${g-6} C 284 176, 274 162, 282 146 Z" fill="#6d6d74"/><path d="M286 146 C 282 166, 294 176, 290 ${g-6} L 302 ${g-6} C 308 176, 300 160, 306 144 Z" fill="#6d6d74"/>
+    ${[140,162,266,290].map(x=>`<ellipse cx="${x+6}" cy="${g-4}" rx="9" ry="4" fill="#3c3c42"/>`).join('')}
+    <path d="M312 122 C 340 130, 360 150, 366 176 C 356 178, 336 160, 316 142 Z" fill="#6d6d74"/><path d="M358 166 C 362 172, 366 176, 366 176 C 356 178, 352 172, 350 168 Z" fill="#c9c6bf"/>
+    ${ground(420, g)}
+    ${dim(40, 214, 366, 214, '6.5 studs')}
+    ${dim(392, g, 392, 54, '3.4', true)}
+    ${callout(300, 112, 190, 44, 'Dark saddle along the back')}
+    ${callout(96, 70, 40, 20, 'Amber eyes, set forward, recessed')}
+    ${callout(150, 156, 200, 68, 'Deep chest, tucked waist')}`;
+  },
+  front: () => {
+    const g = 200;
+    return `
+    <path d="M80 120 C 80 96, 150 96, 150 120 L 148 158 C 140 172, 90 172, 82 158 Z" fill="#7d7d84"/>
+    <path d="M94 150 C 100 168, 130 168, 136 150 L 130 140 L 100 140 Z" fill="#c9c6bf"/>
+    <path d="M84 60 C 84 44, 146 44, 146 60 L 140 92 C 132 108, 98 108, 90 92 Z" fill="#7d7d84"/>
+    <path d="M102 84 C 102 74, 128 74, 128 84 L 124 104 C 120 110, 110 110, 106 104 Z" fill="#8c8b90"/><ellipse cx="115" cy="104" rx="7" ry="5" fill="#1b1b1e"/>
+    <path d="M92 70 l 10 3" stroke="#1a1a1c" stroke-width="3"/><path d="M138 70 l -10 3" stroke="#1a1a1c" stroke-width="3"/>
+    <circle cx="98" cy="72" r="2.4" fill="#e8c46a"/><circle cx="132" cy="72" r="2.4" fill="#e8c46a"/>
+    <path d="M86 54 l -2 -26 l 18 18 Z" fill="#55565e"/><path d="M144 54 l 2 -26 l -18 18 Z" fill="#55565e"/>
+    <rect x="88" y="164" width="12" height="${g-164}" fill="#6d6d74"/><rect x="130" y="164" width="12" height="${g-164}" fill="#6d6d74"/>
+    ${ground(230, g)}
+    ${dim(78, 214, 152, 214, '3 studs')}`;
+  },
+  notes: ['Lean and long-legged: shoulder height ≈ 0.45 of body length, legs ≈ half of shoulder height.',
+          'Narrow wedge muzzle (≈ 0.4 of skull length), tall pointed ears with pale insides.',
+          'Thick neck ruff blends into the chest. Bushy tail hangs low with a pale tip.',
+          'Coat: grey, darker saddle, cream throat, chest and belly.'],
+  colors: [['#7d7d84','Coat'],['#55565e','Saddle'],['#c9c6bf','Throat / belly'],['#e8c46a','Eyes'],['#3c3c42','Paws']],
+};
+
+// Night Wolf: wolf build, darker, spirit markings
+C.NightWolf = {
+  title: 'Night Wolf', kind: 'normal', meta: 'Lv 7 · 3.2 × 3.6 × 7 studs · normal, night only',
+  sideW: 420, sideH: 230, frontW: 230, frontH: 230, s: 50,
+  side: () => C.Wolf.side().replaceAll('#7d7d84', '#2c3047').replaceAll('#55565e', '#1b1e2e').replaceAll('#c9c6bf', '#4a5070').replaceAll('#8c8b90', '#343a55').replaceAll('#6d6d74', '#262a3e').replaceAll('#e8c46a', '#9fe2ff')
+    .replace('Dark saddle along the back', 'Glowing spine marks').replace('Amber eyes, set forward, recessed', 'Pale blue glowing eyes')
+    + [150,180,210,240,268].map((x,i)=>`<path d="M${x} ${104+i%2*3} l 14 -3" stroke="#8fd8ff" stroke-width="3" stroke-linecap="round" opacity=".9"/>`).join(''),
+  front: () => C.Wolf.front().replaceAll('#7d7d84', '#2c3047').replaceAll('#55565e', '#1b1e2e').replaceAll('#c9c6bf', '#4a5070').replaceAll('#8c8b90', '#343a55').replaceAll('#6d6d74', '#262a3e').replaceAll('#e8c46a', '#9fe2ff')
+    + `<path d="M108 52 l 14 0" stroke="#8fd8ff" stroke-width="3" stroke-linecap="round"/>`,
+  notes: ['Same skeleton as the Grey Wolf, 8% bigger and a little shaggier at the neck.',
+          'Indigo-black coat, slate throat. Pale blue eyes are a separate glow part.',
+          'Broken glow marks along the spine and one on the brow (separate Neon pieces that pulse at night).'],
+  colors: [['#2c3047','Coat'],['#1b1e2e','Saddle'],['#4a5070','Throat'],['#9fe2ff','Glow (eyes, marks)']],
+};
+
+// Tusk Boar elite: 11 long, 6 tall, 7 wide
+C.TuskBoar = {
+  title: 'Tusk Boar', kind: 'elite', meta: 'Lv 9 · 7 × 6 × 11 studs · elite',
+  sideW: 520, sideH: 300, frontW: 300, frontH: 300, s: 40,
+  side: () => {
+    const g = 270;
+    return `
+    <path d="M120 160 C 140 108, 220 86, 290 90 C 350 90, 410 108, 440 140 C 462 166, 462 204, 440 222 C 410 242, 360 244, 310 242 L 210 242 C 160 242, 128 222, 118 196 Z" fill="#5a3e2d"/>
+    <path d="M150 116 C 210 76, 320 76, 400 104 C 360 100, 300 98, 250 104 C 210 108, 180 116, 150 130 Z" fill="#3a271c"/>
+    ${[150,175,200,225,250,275,300,325,350,375].map((x,i)=>`<path d="M${x} ${112-(i<5?i*4:20-(i-5)*4)} l 8 -${16+(i%3)*8} l 9 ${16+(i%3)*8} Z" fill="#2c1d15"/>`).join('')}
+    <path d="M165 120 C 190 110, 220 110, 240 124 L 236 150 C 210 146, 186 146, 168 154 Z" fill="#7b6a58" opacity=".9"/>
+    <path d="M200 116 C 220 112, 236 116, 246 126" stroke="#a8977f" stroke-width="2" fill="none"/>
+    <path d="M122 150 C 96 140, 62 152, 44 178 C 34 194, 38 210, 54 214 C 78 220, 108 210, 128 196 Z" fill="#6a4a36"/>
+    <ellipse cx="42" cy="202" rx="10" ry="15" fill="#4a3226"/>
+    <path d="M70 206 C 52 196, 40 172, 52 146 C 58 134, 72 130, 80 136" stroke="#f1e7d2" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M84 166 l 12 -4" stroke="#1a100c" stroke-width="4"/><circle cx="90" cy="164" r="3" fill="#ff5a3a"/>
+    <path d="M118 146 l 10 -32 l 14 26 Z" fill="#3a271c"/>
+    <path d="M166 238 L 160 ${g-6} L 182 ${g-6} L 186 238 Z" fill="#4a3226"/><path d="M196 240 L 192 ${g-6} L 214 ${g-6} L 216 240 Z" fill="#4a3226"/>
+    <path d="M360 236 L 352 ${g-6} L 374 ${g-6} L 380 236 Z" fill="#4a3226"/><path d="M394 230 L 388 ${g-6} L 410 ${g-6} L 414 230 Z" fill="#4a3226"/>
+    ${[160,192,352,388].map(x=>`<rect x="${x}" y="${g-8}" width="22" height="8" rx="2" fill="#1e140f"/>`).join('')}
+    <path d="M200 200 l 30 -10 M 290 180 l 20 18 M 330 210 l 24 -6" stroke="#2a1a12" stroke-width="3" stroke-linecap="round"/>
+    ${ground(520, g)}
+    ${dim(36, 288, 462, 288, '11 studs')}
+    ${dim(496, g, 496, 86, '6', true)}
+    ${callout(60, 150, 26, 100, 'Big curved tusks, ivory, chipped')}
+    ${callout(200, 130, 230, 46, 'Hardened hide plates on the shoulders')}
+    ${callout(90, 164, 70, 250, 'Red eyes')}
+    ${callout(300, 186, 340, 290, 'Old scars (inset strokes)')}`;
+  },
+  front: () => {
+    const g = 270;
+    return `
+    <ellipse cx="150" cy="170" rx="100" ry="76" fill="#5a3e2d"/>
+    <path d="M70 116 C 100 84, 200 84, 230 116 C 200 104, 100 104, 70 116 Z" fill="#3a271c"/>
+    <path d="M70 140 C 60 120, 90 108, 110 118 L 104 150 Z" fill="#7b6a58"/><path d="M230 140 C 240 120, 210 108, 190 118 L 196 150 Z" fill="#7b6a58"/>
+    <path d="M100 142 C 100 118, 200 118, 200 142 L 192 208 C 184 226, 116 226, 108 208 Z" fill="#6a4a36"/>
+    <ellipse cx="150" cy="204" rx="28" ry="20" fill="#4a3226"/>
+    <path d="M118 216 C 96 200, 92 176, 104 160" stroke="#f1e7d2" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M182 216 C 204 200, 208 176, 196 160" stroke="#f1e7d2" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <circle cx="124" cy="152" r="4" fill="#ff5a3a"/><circle cx="176" cy="152" r="4" fill="#ff5a3a"/>
+    <rect x="80" y="236" width="22" height="${g-236}" fill="#4a3226"/><rect x="198" y="236" width="22" height="${g-236}" fill="#4a3226"/>
+    ${ground(300, g)}
+    ${dim(50, 288, 250, 288, '7 studs')}`;
+  },
+  notes: ['A boar grown old and heavy: same anatomy as the Boar, shoulders taller still, back sloping hard.',
+          'Long curved tusks (≈ 0.25 of body length) sweeping up past the snout.',
+          'Pale, cracked hide plates over the shoulders; scars inset into the flank, never stuck on.',
+          'Bristle crest twice as tall as the Boar\'s, and red eyes as separate glow parts.'],
+  colors: [['#5a3e2d','Coat'],['#2c1d15','Crest'],['#7b6a58','Hide plates'],['#f1e7d2','Tusks'],['#ff5a3a','Eyes']],
+};
+
+// Moonhorn Stag rare: 9 long, 7 tall to the antler tips, 4 wide
+C.MoonhornStag = {
+  title: 'Moonhorn Stag', kind: 'rare', meta: 'Lv 10 · 4 × 7 × 9 studs · zone rare',
+  sideW: 520, sideH: 330, frontW: 300, frontH: 330, s: 40,
+  side: () => {
+    const g = 300;
+    return `
+    <path d="M170 170 C 190 150, 260 146, 320 150 C 360 152, 386 160, 396 178 C 404 196, 396 214, 378 218 C 340 224, 280 222, 230 220 C 196 220, 172 210, 166 194 Z" fill="#dfe2ea"/>
+    <path d="M200 156 C 240 148, 330 150, 380 166 C 340 160, 280 158, 240 160 Z" fill="#c4c9d6"/>
+    <path d="M176 176 C 160 150, 150 120, 152 96 L 176 92 C 180 118, 190 146, 200 166 Z" fill="#dfe2ea"/>
+    <path d="M148 100 C 130 96, 112 102, 98 112 C 92 118, 94 124, 102 126 C 118 128, 140 120, 158 112 Z" fill="#e9ecf2"/>
+    <ellipse cx="98" cy="118" rx="5" ry="4" fill="#3a3e4a"/>
+    <circle cx="134" cy="104" r="3" fill="#24324a"/><circle cx="135" cy="103" r="1.2" fill="#bfe8ff"/>
+    <path d="M150 94 l 12 -10 l -2 14 Z" fill="#c4c9d6"/>
+    <path d="M150 90 C 150 60, 168 34, 200 22 C 186 40, 176 58, 172 86" fill="none" stroke="#e8f4ff" stroke-width="6" stroke-linecap="round"/>
+    <path d="M150 90 C 140 64, 122 46, 96 40 C 116 52, 130 68, 138 90" fill="none" stroke="#e8f4ff" stroke-width="6" stroke-linecap="round"/>
+    <path d="M164 60 l 18 -8 M 140 64 l -16 -10" stroke="#e8f4ff" stroke-width="4" stroke-linecap="round"/>
+    <path d="M196 26 l 8 -6 M 98 40 l -8 -4" stroke="#9fe2ff" stroke-width="5" stroke-linecap="round"/>
+    <path d="M190 216 L 184 ${g-6} L 194 ${g-6} L 202 216 Z" fill="#cdd2dc"/><path d="M212 218 L 208 ${g-6} L 218 ${g-6} L 224 218 Z" fill="#cdd2dc"/>
+    <path d="M350 214 C 344 240, 358 258, 352 ${g-6} L 362 ${g-6} C 370 258, 362 238, 366 212 Z" fill="#cdd2dc"/><path d="M372 210 C 368 240, 380 258, 374 ${g-6} L 384 ${g-6} C 392 258, 384 236, 388 208 Z" fill="#cdd2dc"/>
+    ${[184,208,352,374].map(x=>`<rect x="${x}" y="${g-7}" width="11" height="7" rx="1" fill="#5a5f6e"/>`).join('')}
+    <path d="M394 176 C 412 184, 420 200, 418 214" stroke="#e9ecf2" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <path d="M260 180 C 280 176, 300 180, 316 188" stroke="#9fe2ff" stroke-width="3" fill="none" opacity=".85"/>
+    ${ground(520, g)}
+    ${dim(90, 318, 420, 318, '9 studs')}
+    ${dim(496, g, 496, 20, '7', true)}
+    ${callout(176, 50, 240, 30, 'Crescent "moon" antlers, pale silver')}
+    ${callout(198, 24, 290, 70, 'Glowing tips (separate glow parts)')}
+    ${callout(288, 180, 330, 120, 'Glowing flank crescent')}`;
+  },
+  front: () => {
+    const g = 300;
+    return `
+    <ellipse cx="150" cy="196" rx="54" ry="40" fill="#dfe2ea"/>
+    <path d="M128 168 C 124 140, 126 116, 134 100 L 166 100 C 174 116, 176 140, 172 168 Z" fill="#dfe2ea"/>
+    <path d="M130 96 C 130 80, 170 80, 170 96 L 164 124 C 158 134, 142 134, 136 124 Z" fill="#e9ecf2"/>
+    <circle cx="138" cy="100" r="3" fill="#24324a"/><circle cx="162" cy="100" r="3" fill="#24324a"/>
+    <path d="M136 84 C 120 60, 100 46, 70 40 M 164 84 C 180 60, 200 46, 230 40" stroke="#e8f4ff" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M118 62 l -6 -18 M 182 62 l 6 -18" stroke="#e8f4ff" stroke-width="4" stroke-linecap="round"/>
+    <path d="M70 40 l -8 -4 M 230 40 l 8 -4" stroke="#9fe2ff" stroke-width="5" stroke-linecap="round"/>
+    <rect x="118" y="230" width="10" height="${g-230}" fill="#cdd2dc"/><rect x="172" y="230" width="10" height="${g-230}" fill="#cdd2dc"/>
+    ${ground(300, g)}
+    ${dim(96, 318, 204, 318, '4 studs (body)')}`;
+  },
+  notes: ['Elegant red-deer build: long neck held high, slim legs (≈ 0.55 of shoulder height), small hooves.',
+          'Antlers sweep into two crescents, like a moon on its back; their tips glow pale blue.',
+          'Silver-white coat with a cooler grey back; a faint glowing crescent on each flank.',
+          'It flees rather than fights, so it reads gentle: soft eyes, no spikes.'],
+  colors: [['#dfe2ea','Coat'],['#c4c9d6','Back'],['#e8f4ff','Antlers'],['#9fe2ff','Glow'],['#5a5f6e','Hooves']],
+};
+
+// Tusk King boss: 18 long, 10 tall, 12 wide
+C.TuskKing = {
+  title: 'Tusk King', kind: 'boss', meta: 'Lv 12 · 12 × 10 × 18 studs · zone boss',
+  sideW: 560, sideH: 340, frontW: 330, frontH: 340, s: 26,
+  side: () => {
+    const g = 310;
+    return `
+    <path d="M120 170 C 140 108, 230 76, 320 78 C 400 78, 470 100, 500 140 C 526 176, 522 226, 494 250 C 460 272, 400 276, 340 274 L 220 274 C 160 274, 126 250, 116 214 Z" fill="#3e3a36"/>
+    <path d="M150 112 C 230 64, 380 64, 470 98 C 420 94, 350 90, 290 96 C 230 100, 190 112, 150 132 Z" fill="#26231f"/>
+    ${[160,190,220,250,280,310,340,370,400,430].map((x,i)=>`<path d="M${x} ${110-(i<5?i*5:25-(i-5)*5)} l 9 -${22+(i%3)*10} l 11 ${22+(i%3)*10} Z" fill="#1c1a17"/>`).join('')}
+    ${[[230,96,40,18],[300,92,46,20],[380,100,36,16],[440,118,26,12]].map(([x,y,w,h])=>`<ellipse cx="${x}" cy="${y}" rx="${w}" ry="${h}" fill="#4f6a3a" opacity=".95"/>`).join('')}
+    <path d="M150 106 C 160 70, 190 56, 214 62 C 200 74, 196 90, 198 110 Z" fill="#cfc3a8"/>
+    <path d="M168 80 l 6 -26 l 10 22 M 186 72 l 8 -24 l 8 24" fill="#cfc3a8" stroke="#cfc3a8" stroke-width="2"/>
+    <path d="M124 160 C 92 146, 56 160, 36 190 C 26 208, 30 226, 48 230 C 76 236, 108 224, 130 208 Z" fill="#4a4540"/>
+    <ellipse cx="34" cy="218" rx="12" ry="17" fill="#2e2a27"/>
+    <path d="M66 224 C 34 210, 18 172, 36 136 C 48 112, 76 104, 92 118" stroke="#efe4c8" stroke-width="13" fill="none" stroke-linecap="round"/>
+    ${[[44,150],[56,128],[74,116]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="9" fill="none" stroke="#b07a3a" stroke-width="5"/>`).join('')}
+    <path d="M86 178 l 14 -4" stroke="#140e0b" stroke-width="5"/><circle cx="94" cy="176" r="4.5" fill="#ff8a2a"/>
+    <path d="M168 270 L 160 ${g-8} L 188 ${g-8} L 192 270 Z" fill="#33302c"/><path d="M204 272 L 198 ${g-8} L 226 ${g-8} L 228 272 Z" fill="#33302c"/>
+    <path d="M410 268 L 400 ${g-8} L 428 ${g-8} L 434 268 Z" fill="#33302c"/><path d="M448 262 L 440 ${g-8} L 468 ${g-8} L 472 262 Z" fill="#33302c"/>
+    ${[160,198,400,440].map(x=>`<rect x="${x}" y="${g-10}" width="28" height="10" rx="2" fill="#16130f"/>`).join('')}
+    <path d="M260 200 l 40 -12 M 330 232 l 34 -16" stroke="#ff7a2a" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+    ${ground(560, g)}
+    ${dim(24, 328, 524, 328, '18 studs')}
+    ${dim(540, g, 540, 56, '10', true)}
+    ${callout(60, 128, 20, 70, 'Huge spiral tusks with bronze rings')}
+    ${callout(190, 66, 240, 30, 'Carved bone crown')}
+    ${callout(300, 92, 360, 40, 'Moss growing on its back')}
+    ${callout(280, 196, 320, 330, 'Ember cracks in the hide (glow)')}`;
+  },
+  front: () => {
+    const g = 310;
+    return `
+    <ellipse cx="165" cy="190" rx="132" ry="96" fill="#3e3a36"/>
+    <path d="M60 126 C 100 82, 230 82, 270 126 C 230 110, 100 110, 60 126 Z" fill="#26231f"/>
+    <path d="M110 120 C 120 84, 150 70, 165 70 C 180 70, 210 84, 220 120 C 200 110, 130 110, 110 120 Z" fill="#cfc3a8"/>
+    <path d="M140 84 l 6 -26 l 8 24 M 176 82 l 8 -24 l 6 26" fill="#cfc3a8" stroke="#cfc3a8" stroke-width="2"/>
+    <path d="M108 150 C 108 120, 222 120, 222 150 L 212 230 C 202 252, 128 252, 118 230 Z" fill="#4a4540"/>
+    <ellipse cx="165" cy="226" rx="34" ry="24" fill="#2e2a27"/>
+    <path d="M124 238 C 92 214, 86 176, 104 152" stroke="#efe4c8" stroke-width="13" fill="none" stroke-linecap="round"/><path d="M206 238 C 238 214, 244 176, 226 152" stroke="#efe4c8" stroke-width="13" fill="none" stroke-linecap="round"/>
+    <circle cx="96" cy="180" r="9" fill="none" stroke="#b07a3a" stroke-width="5"/><circle cx="234" cy="180" r="9" fill="none" stroke="#b07a3a" stroke-width="5"/>
+    <circle cx="136" cy="164" r="5" fill="#ff8a2a"/><circle cx="194" cy="164" r="5" fill="#ff8a2a"/>
+    <rect x="68" y="270" width="30" height="${g-270}" fill="#33302c"/><rect x="232" y="270" width="30" height="${g-270}" fill="#33302c"/>
+    ${ground(330, g)}
+    ${dim(33, 328, 297, 328, '12 studs')}`;
+  },
+  notes: ['The ancient king of the boars: Tusk Boar anatomy pushed further, so it reads as the same family.',
+          'Spiral tusks ringed with hammered bronze bands; a crown of carved bone between the ears.',
+          'Moss and small ferns on the back (it has slept for a century); ember cracks glow in the hide.',
+          'Fiery orange eyes; heavy hooves that leave cracks when it charges (VFX, not geometry).'],
+  colors: [['#3e3a36','Hide'],['#1c1a17','Crest'],['#4f6a3a','Moss'],['#efe4c8','Tusks'],['#b07a3a','Bronze'],['#ff8a2a','Eyes / embers']],
+};
+
+const order = ['Boar', 'Wolf', 'NightWolf', 'TuskBoar', 'MoonhornStag', 'TuskKing'];
+const host = document.getElementById('cards');
+for (const id of order) {
+  const c = C[id];
+  const el = document.createElement('section');
+  el.className = 'card';
+  el.innerHTML = `
+    <div class="head"><h2>${c.title}</h2><span class="tag ${c.kind}">${c.kind}</span><span class="meta">${c.meta}</span></div>
+    <div class="views">
+      <div class="view"><div class="label">SIDE</div><svg viewBox="0 0 ${c.sideW} ${c.sideH}" role="img" aria-label="${c.title} side view">${GRID(c.sideW, c.sideH, c.s)}${c.side()}</svg></div>
+      <div class="view"><div class="label">FRONT</div><svg viewBox="0 0 ${c.frontW} ${c.frontH}" role="img" aria-label="${c.title} front view">${GRID(c.frontW, c.frontH, c.s)}${c.front()}</svg></div>
+    </div>
+    <ul>${c.notes.map(n => `<li>${n}</li>`).join('')}</ul>
+    <div class="swatches">${c.colors.map(([hex, n]) => `<span class="sw"><i style="background:${hex}"></i>${n}</span>`).join('')}</div>`;
+  host.appendChild(el);
+}
+</script>
+</body>
+</html>

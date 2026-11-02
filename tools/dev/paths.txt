@@ -1,0 +1,4 @@
+ReplicatedStorage/Mystree/Creatures.lua
+ReplicatedStorage/Mystree/Builders.lua
+StarterPlayer/StarterPlayerScripts/MystreeClient/Gaits.lua
+StarterPlayer/StarterPlayerScripts/MystreeClient.client.lua

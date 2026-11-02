@@ -1,0 +1,69 @@
+# Session Handoff: Mystree, 2026-10-26
+
+Back to [[00 Start Here]] · [[CHO/README]] · [[Mystree Kickoff]]
+
+- **Place / studio:** CHO (placeId 98987233689526). The Studio MCP id changes on reconnect; it was `58d5d4c7-…` at the end.
+- **What the user asked for:**
+  - Core architecture for "Mystree" (an idle cultivation RPG like Chop Chop): Divine Tree chopping with high-dopamine drops, gear/CP/dismantle, Hunting Grounds combat, a 5-minute day/night cycle with Bloodmoon/Golden Hour events and alerts, companions, mounts, Inspect, and communal mob scaling.
+  - Semi-realistic art.
+  - UI from their Chop Chop screenshots.
+  - Then: "make everyone chop their tree in their own little island", "maybe add island customization", and "dont use terrain builder".
+- **Done and pushed (all in Studio, synced):**
+  - Shared modules: Config, Net, Format, Rules, Builders, Assets.
+  - The server: 14 services.
+  - The client: 21 modules.
+  - The parts-only world: Village island, 8 player islands, Hunting Grounds strip.
+  - HttpEnabled was turned on for the sync tools. The default Baseplate and SpawnLocation were removed.
+- **Tested in Play (Studio, no API access, so nothing saved):**
+  - Spawning on your own island.
+  - Chopping, measured: Peaches spent, drops, auto-equip, CP rising, Exp, goal progress.
+  - Rare+ beam, card and moment, measured as instances over time.
+  - Travel to the Grounds; 4 boars killed with clicks (level-up, Sap and Scraps drops).
+  - A Bloodmoon event with its boss alert and spawns.
+  - Bag and Tree windows (screenshots).
+  - Console clean after the fixes.
+- **Not tested yet:**
+  - The Spirits/summon, Mounts/riding, Shop, Inspect and Daily windows in Play.
+  - Elites and bosses fought to the end.
+  - Two players: communal scaling and seeing others chop.
+  - The phone layout at a real phone size.
+  - Real saves (needs Studio API access).
+  - Swing, chop and ride poses are only roughly checked. The weapon's grip angle looks off: the greatsword is held sideways.
+- **Open risks:**
+  - Placeholder art everywhere: the semi-realistic art pass hasn't been done.
+  - Sound ids are reused from other projects.
+  - Product and pass ids are 0.
+- **Tutorial (later the same day):** `TutorialService` + client `Tutorial`. Played all 5 steps in Studio with real clicks: each paid its reward, and the last one auto-equipped an Epic sword. The spotlight lined up on CHOP, Grow, the Summon tab, Summon x1 and Hunt, and the console was clean. Not tested yet: touch wording on a phone, and a gamepad.
+- **Village, quests, economy, offers (later the same day):**
+  - **Built:** `QuestService` + client `Quests`; 7 NPCs; `Builders.Village` (1,234 parts, 0 z-fight pairs); the stingy tree (Peach cap and regrowth by tree level, scaled lucky bonuses, `Config.Tree.MaxRarity`); the `Offers` module (Starter Pack, Out of Peaches, Spirit top-up, Bag full, Revive, Fresh Orders); the Fortune Charm and Celestial Steed passes; no safe inset; the circular loot icon.
+  - **Tested in Play:** talking to Elder Mo starts the main quest; accepting a side quest from Rui; QuestProgress reaching the client; the quest log; Starter Pack, Fortune Charm and Celestial Steed grants; the countdown pill; the Out of Peaches sheet; spotlight alignment; console clean.
+  - **Not tested:** handing in quests end to end; Revive on a real death; Fresh Orders; the bag-full offer; NPC look (default Roblox avatars, placeholder).
+- **Island customization + leaderboard + quiet tutorial (later the same day):**
+  - **Tested in Play:** buying and placing 12 decor pieces, with the edge, clear-zone and spacing rules rejecting bad spots; the Cherry Blossom and Autumn themes; decor buffs; the leaderboard dropdown and the in-server board fallback; no toasts or offers during the tutorial; the daily gift waiting for the tutorial to end; the roomier 2-column sidebar; console clean.
+  - **Not tested:** visiting and liking (needs 2 players: Studio Test > 2 clients); edit-mode move and store by clicking; the global boards (need API access); the placement ghost on touch.
+- **UI v2 + quest accept/decline + interactables (later the same day):**
+  - **Tested in Play:** the new layout at 1722 and 1920 widths; the dock hidden in the Village; Elder Mo offering M1 and accepting it; the shrine's E opening Spirits > Summon; the daily gift after the tutorial; window blur; console clean apart from one anti-cheat strike from my test teleport.
+  - **Not tested:** the Decline button in the dialog; the Hall of Fame boards filling (needs the Boards attribute; they show the in-server list in Studio); the tree billboard; the phone layout.
+- **HUD rework + settings + transitions (later the same day):**
+  - Currencies and materials moved bottom-right with a Settings gear; the compact leaderboard opens by default and Tab toggles it; quests say "Track"; every travel button uses the `Transition` ink wash; StarterGui has view-only UI copies (`ui_snapshot.lua` / `ui_preview.lua`).
+  - **Tested in Play:** Settings window, Music toggle saved to the profile and muting the music group, Tab closing/opening the list, Village travel, the wash's title card, console clean.
+  - 37 custom icons drawn in `CHO/tools/icons` (not uploaded yet; needs the user's OK).
+  - Saves: the tutorial repeats in Studio only because Studio API access is off.
+- **Wildlands + mutations + forging (later the same day):** see Kickoff 5g.
+  - **Tested in Play:** all 6 bosses in their arenas, elites/camps filling, mutated mobs appearing on their own, zone tracking ("Camp"), Forge tier 4 and Mythforge Qilin's Verdict, equipping it, its proc firing on the 5th landed swing, dismantling a weapon for Star Shards, the Tusk King dropping a Willowguard piece, set bonuses (2pc/4pc), a Qilin dropping its horn, the Forge window tabs, console clean.
+  - **Z-fighting:** scripted check of every flat Wildlands part; fixed bamboo stalks, overlapping pools and pillar bases. Clean now.
+  - **Not tested:** a natural Rare spawn and Mythic roll (chance-based; admin spawns work), boss respawn after 8 min, mutated drops on kill, phone layout of the Forge window, long-play balance of levels 40-60.
+- **Balance pass 40-60 (later the same day):** see Kickoff 5h. Ashen/Frost mob stats and drops are in local `Config.lua`, and `Rules.mobStats` takes a per-mob `Growth`. The sim tools are in `tools/dev`. Studio closed the place during the last sim run. When it's reopened: check that Studio's `Config`/`Rules` match local (push `Config.lua` and `Rules.lua` with `paths.txt`, then run `sync.py done`), and re-run the sim per zone (one zone per call).
+- **Later the same day (UI and world tweaks):**
+  - The Hall of Fame steles in the Village are the leaderboards now: bigger, with column rows, and no button or window.
+  - The island chest and workbench moved out to (±17, 6). Decor that ends up in the new clear spots goes back to the stash on load, with a message.
+  - The Settings gear sits above the materials row.
+  - The sleek UI kit, the Power icon and the Starter Pack banner are done.
+  - A helper ran a UI quality pass over every screen.
+  - **Checked:** no overlaps or coplanar faces for the steles and the 16 island props; the boards fill in Play.
+- **Next step:** island customization, once the user picks which ideas to build. Then the art pass: tree stages, weapons, mobs, companions, mounts, island meshes, animations.
+- **Lessons added to the Playbook:**
+  - 05: floating islands from parts.
+  - 07: UIGradient tints its object's own text.
+  - 09: BindableEvent copies tables; defer first loads; FontWeight.Black doesn't exist; no Lua fields on Instances.
+  - 10: Play captures lag behind short effects; the paths.txt push script; probe for Studio API access.
