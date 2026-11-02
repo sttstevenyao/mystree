@@ -1,3 +1,9 @@
+# Mystree
+
+An idle-cultivation RPG for Roblox, written in Luau. Chop your Divine Tree on a floating island for gear, hunt in the open-world Wildlands, and grow the tree with what you bring back. Animals are sculpted in code from thousands of triangle plates, with real joints and procedural gaits.
+
+The notes below are the development notes.
+
 # Mystree (Roblox place "CHO")
 
 Roblox place **CHO** (placeId 98987233689526, group 35685335). An idle-cultivation RPG: chop your Divine Tree on your own floating island for gear, hunt with friends, grow the tree for rarer drops. Design: [[Mystree Kickoff]]. Quality bar: the Playbook ([[00 Start Here]]), with Mystree's art and UI exceptions listed in the kickoff.
